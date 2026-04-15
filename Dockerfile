@@ -1,5 +1,5 @@
 # Usamos una imagen ligera de Node.js
-FROM node:18-alpine
+FROM node:20-alpine
 
 # Carpeta donde vivirá la app dentro del contenedor
 WORKDIR /app
