@@ -33,7 +33,7 @@ pipeline {
             steps {
                 sh 'npm install'
                 sh 'chmod -R +x ./node_modules/.bin'
-                //sh 'npx mocha test/seleniumTest.js --reporter mochawesome --reporter-options reportDir=Reporte_Calidad,reportFilename=mochawesome'
+                sh 'npx mocha test/seleniumTest.js --reporter mochawesome --reporter-options reportDir=Reporte_Calidad,reportFilename=mochawesome'
             }
         }
     }
