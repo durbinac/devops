@@ -1,73 +1,53 @@
 pipeline {
     agent any
-    
-    tools {
-        nodejs 'node20' 
-    }
 
     stages {
         stage('Descarga de Código') {
             steps {
-                // Descarga el código del repo configurado en el Job
-                checkout scm 
+                checkout scm
             }
         }
 
         stage('Build Image') {
             steps {
-                // Construye la imagen de Docker
                 sh 'docker build -t mi-app-node:latest .'
             }
         }
 
-        stage('Run & Test') {
+        stage('Run & Deploy') {
             steps {
                 script {
-                    // 1. Limpieza de puerto 3000 y contenedores previos
-                    sh "docker ps -q --filter 'publish=3000' | xargs -r docker rm -f"
-                    sh 'docker rm -f mi-app-node || true'
-                    
-                    // 2. Levantar la aplicación
+                    // Limpieza: borra el contenedor si ya existe
+                    sh 'docker ps -q --filter name=mi-app-node | xargs -r docker rm -f'
+                    // Despliegue
                     sh 'docker run -d -p 3000:3000 --name mi-app-node mi-app-node:latest'
-                    
-                    // 3. Esperar a que la app inicie
                     sh 'sleep 5'
-                    
-                    // 4. Configurar Node y correr Tests
-                    def nodeHome = tool name: 'node20', type: 'jenkins.plugins.nodejs.tools.NodeJSInstallation'
-                    withEnv(["PATH+NODEJS=${nodeHome}/bin"]) {
-                        sh 'npm install'
-                        // Corregimos permisos de ejecución para Mocha
-                        sh 'chmod -R +x ./node_modules/.bin'
-                        
-                       // ANTES (Básico):
-// catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
-//    sh 'npx mocha test/seleniumTest.js ...'
-// }
+                }
+            }
+        }
 
-            // AHORA (Pro):
-            stage('Testing') {
-                steps {
-                    // Ejecuta la prueba directamente. Si falla, el Pipeline muere aquí.
-                    sh 'npx mocha test/seleniumTest.js --reporter mochawesome --reporter-options reportDir=Reporte_Calidad,reportFilename=mochawesome'
-                }
+        stage('Testing') {
+            steps {
+                // AQUÍ ESTÁ EL CAMBIO PRO:
+                // Sin catchError. Si mocha falla, el pipeline se detiene en FAILURE.
+                sh 'npm install'
+                sh 'chmod -R +x ./node_modules/.bin'
+                sh 'npx mocha test/seleniumTest.js --reporter mochawesome --reporter-options reportDir=Reporte_Calidad,reportFilename=mochawesome'
             }
-                    }
-                }
-            }
-            post {
-                always {
-                    // Publica el reporte en la interfaz de Jenkins (Requiere plugin HTML Publisher)
-                    publishHTML(target: [
-                        allowMissing: false,
-                        alwaysLinkToLastBuild: true,
-                        keepAll: true,
-                        reportDir: 'Reporte_Calidad',
-                        reportFiles: 'mochawesome.html',
-                        reportName: 'Reporte de Calidad Selenium'
-                    ])
-                }
-            }
+        }
+    }
+
+    post {
+        always {
+            // Esto garantiza que el reporte se guarde siempre, incluso si falló el test
+            publishHTML(target: [
+                allowMissing: false,
+                alwaysLinkToLastBuild: true,
+                keepAll: true,
+                reportDir: 'Reporte_Calidad',
+                reportFiles: 'mochawesome.html',
+                reportName: 'Reporte de Calidad Selenium'
+            ])
         }
     }
 }
