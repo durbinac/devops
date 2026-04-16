@@ -40,10 +40,18 @@ pipeline {
                         // Corregimos permisos de ejecución para Mocha
                         sh 'chmod -R +x ./node_modules/.bin'
                         
-                        catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
-                            // Ejecuta el test y genera el reporte en la carpeta específica
-                            sh 'npx mocha test/*.js --reporter mochawesome --reporter-options reportDir=Reporte_Calidad,reportFilename=mochawesome'
-                        }
+                       // ANTES (Básico):
+// catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
+//    sh 'npx mocha test/seleniumTest.js ...'
+// }
+
+            // AHORA (Pro):
+            stage('Testing') {
+                steps {
+                    // Ejecuta la prueba directamente. Si falla, el Pipeline muere aquí.
+                    sh 'npx mocha test/seleniumTest.js --reporter mochawesome --reporter-options reportDir=Reporte_Calidad,reportFilename=mochawesome'
+                }
+            }
                     }
                 }
             }
